@@ -39,7 +39,7 @@ class _ChickenFormState extends State<ChickenForm> {
   final TextEditingController _totalWeightController = TextEditingController();
   final TextEditingController _pricePerKgController = TextEditingController();
   String? _selectedFarmer;
-  List<String> _farmers = [];
+  List<Map<String, dynamic>> _farmers = [];
 
   @override
   void initState() {
@@ -52,7 +52,9 @@ class _ChickenFormState extends State<ChickenForm> {
   Future<void> _loadFarmers() async {
     FirebaseFirestore.instance.collection('farmers').snapshots().listen((snapshot) {
       setState(() {
-        _farmers = snapshot.docs.map((doc) => doc['name'] as String).toList();
+        _farmers = snapshot.docs
+            .map((doc) => {'id': doc.id, 'name': doc['name']})
+            .toList();
       });
     });
   }
@@ -71,55 +73,71 @@ class _ChickenFormState extends State<ChickenForm> {
     }
   }
 
-void _addFarmerDialog(BuildContext context) {
-  TextEditingController farmerNameController = TextEditingController();
+  void _addFarmerDialog(BuildContext context) {
+    TextEditingController farmerNameController = TextEditingController();
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text('إضافة مربي جديد'),
-        content: TextField(
-          controller: farmerNameController,
-          decoration: InputDecoration(
-            labelText: 'اسم المربي',
-            border: OutlineInputBorder(),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('إضافة مربي جديد'),
+          content: TextField(
+            controller: farmerNameController,
+            decoration: InputDecoration(
+              labelText: 'اسم المربي',
+              border: OutlineInputBorder(),
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            child: Text('إلغاء'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          ElevatedButton(
-            child: Text('إضافة'),
-            onPressed: () {
-              String farmerName = farmerNameController.text.trim();
-              if (farmerName.isNotEmpty) {
-                FirebaseFirestore.instance.collection('farmers').add({
-                  'name': farmerName,
-                }).then((value) {
-                  setState(() {
-                    _selectedFarmer = null; // إعادة تعيين القيمة
-                    _loadFarmers(); // تحديث القائمة
+          actions: [
+            TextButton(
+              child: Text('إلغاء'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              child: Text('إضافة'),
+              onPressed: () {
+                String farmerName = farmerNameController.text.trim();
+                if (farmerName.isNotEmpty) {
+                  FirebaseFirestore.instance.collection('farmers').add({
+                    'name': farmerName,
+                  }).then((value) {
+                    setState(() {
+                      _selectedFarmer = null; // إعادة تعيين القيمة
+                      _loadFarmers(); // تحديث القائمة
+                    });
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('تمت إضافة المربي بنجاح')),
+                    );
+                  }).catchError((error) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('حدث خطأ أثناء الإضافة')),
+                    );
                   });
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('تمت إضافة المربي بنجاح')),
-                  );
-                }).catchError((error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('حدث خطأ أثناء الإضافة')),
-                  );
-                });
-              }
-            },
-          ),
-        ],
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // حذف المربي
+  void _deleteFarmer(String farmerId) {
+    FirebaseFirestore.instance.collection('farmers').doc(farmerId).delete().then((value) {
+      setState(() {
+        _loadFarmers(); // تحديث القائمة بعد الحذف
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم حذف المربي بنجاح')),
       );
-    },
-  );
-}
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء الحذف')),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,9 +161,9 @@ void _addFarmerDialog(BuildContext context) {
                 value: _selectedFarmer,
                 hint: Text('اختر اسم المربي'),
                 items: _farmers
-                    .map((farmer) => DropdownMenuItem(
-                          value: farmer,
-                          child: Text(farmer),
+                    .map((farmer) => DropdownMenuItem<String>(
+                          value: farmer['name'],
+                          child: Text(farmer['name']),
                         ))
                     .toList(),
                 onChanged: (value) {
@@ -259,6 +277,24 @@ void _addFarmerDialog(BuildContext context) {
                   padding: EdgeInsets.symmetric(vertical: 16),
                   textStyle: TextStyle(fontSize: 18),
                 ),
+              ),
+              SizedBox(height: 20),
+              // عرض قائمة المربيين مع زر حذف
+              Text('المربيين الموجودين:'),
+              ListView.builder(
+                shrinkWrap: true,
+                itemCount: _farmers.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(_farmers[index]['name']),
+                    trailing: IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        _deleteFarmer(_farmers[index]['id']);
+                      },
+                    ),
+                  );
+                },
               ),
             ],
           ),
