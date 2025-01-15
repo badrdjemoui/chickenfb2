@@ -5,18 +5,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(); // تهيئة Firebase
   await ensureAdminExists(); // التحقق من وجود المستخدم admin
-  runApp(MyApp());
+  runApp(MyApp()); // تشغيل التطبيق
 }
 
+// دالة للتحقق من وجود المستخدم admin
 Future<void> ensureAdminExists() async {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // تحقق من وجود مستخدم admin
-  var adminEmail = 'admin@example.com';
-  var adminPassword = 'admin';
+  var adminEmail = 'admin@example.com'; // البريد الإلكتروني للمستخدم admin
+  var adminPassword = 'admin'; // كلمة المرور للمستخدم admin
 
   try {
     var adminUser = await _auth.fetchSignInMethodsForEmail(adminEmail);
@@ -34,7 +34,7 @@ Future<void> ensureAdminExists() async {
       await userRef.set({
         'name': 'Admin',
         'email': adminEmail,
-        'isAdmin': true,
+        'isAdmin': true, // تعيين المستخدم كـ Admin
       });
 
       print("Admin user created and added to Firestore");
@@ -44,24 +44,26 @@ Future<void> ensureAdminExists() async {
   }
 }
 
+// تطبيق Flutter
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'إدارة المزرعة',
+      title: 'إدارة المزرعة', // عنوان التطبيق
       theme: ThemeData(
-        primarySwatch: Colors.teal,
-        scaffoldBackgroundColor: Colors.grey[100],
+        primarySwatch: Colors.teal, // اللون الرئيسي للتطبيق
+        scaffoldBackgroundColor: Colors.grey[100], // خلفية الشاشة
         appBarTheme: AppBarTheme(
-          backgroundColor: Colors.teal,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.teal, // اللون الخلفي لشريط التطبيق
+          foregroundColor: Colors.white, // اللون الأمامي لشريط التطبيق
         ),
       ),
-      home: AdminPage(),
+      home: AdminPage(), // الصفحة الرئيسية هي صفحة المسؤول
     );
   }
 }
 
+// صفحة المسؤول لإدارة المستخدمين
 class AdminPage extends StatefulWidget {
   @override
   _AdminPageState createState() => _AdminPageState();
@@ -71,21 +73,21 @@ class _AdminPageState extends State<AdminPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // إضافة مستخدم admin أو مستخدم آخر إلى Firestore
+  // إضافة مستخدم إلى Firestore
   Future<void> addUser(String name, String email, bool isAdmin) async {
     try {
       var userRef = _firestore.collection('users').doc(email); // استخدام البريد الإلكتروني كـ ID
       await userRef.set({
         'name': name,
         'email': email,
-        'isAdmin': isAdmin,
+        'isAdmin': isAdmin, // تحديد إذا كان المستخدم هو admin
       });
     } catch (e) {
       print("Error adding user: $e");
     }
   }
 
-  // جلب المستخدمين من Firestore
+  // جلب جميع المستخدمين من Firestore
   Future<List<DocumentSnapshot>> _getUsers() async {
     var snapshot = await _firestore.collection('users').get();
     return snapshot.docs;
@@ -94,7 +96,7 @@ class _AdminPageState extends State<AdminPage> {
   // حذف مستخدم من Firestore
   Future<void> _deleteUser(String email) async {
     try {
-      await _firestore.collection('users').doc(email).delete();
+      await _firestore.collection('users').doc(email).delete(); // حذف المستخدم باستخدام البريد الإلكتروني
     } catch (e) {
       print("Error deleting user: $e");
     }
@@ -110,48 +112,50 @@ class _AdminPageState extends State<AdminPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('قائمة المستخدمين'),
+        title: Text('قائمة المستخدمين'), // عنوان الصفحة
         actions: [
+          // زر تسجيل الخروج
           IconButton(
             icon: Icon(Icons.exit_to_app),
             onPressed: () async {
-              await _auth.signOut();
+              await _auth.signOut(); // تسجيل الخروج
             },
           ),
         ],
       ),
       body: FutureBuilder<bool>(
-        future: checkIfAdmin(_auth.currentUser?.email ?? ""),
+        future: checkIfAdmin(_auth.currentUser?.email ?? ""), // التحقق مما إذا كان المستخدم هو admin
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator()); // انتظار النتائج
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('حدث خطأ!'));
+            return Center(child: Text('حدث خطأ!')); // إذا حدث خطأ
           }
 
           bool isAdmin = snapshot.data ?? false;
 
           return Column(
             children: [
+              // عرض زر إضافة مستخدم إذا كان المستخدم هو admin
               if (isAdmin)
                 ElevatedButton(
                   onPressed: () {
-                    _showAddUserDialog();
+                    _showAddUserDialog(); // عرض نافذة إضافة مستخدم جديد
                   },
                   child: Text("إضافة مستخدم جديد"),
                 ),
               Expanded(
                 child: FutureBuilder<List<DocumentSnapshot>>(
-                  future: _getUsers(),
+                  future: _getUsers(), // جلب المستخدمين
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator()); // انتظار النتائج
                     }
 
                     if (snapshot.hasError) {
-                      return Center(child: Text('حدث خطأ!'));
+                      return Center(child: Text('حدث خطأ!')); // إذا حدث خطأ
                     }
 
                     var users = snapshot.data;
@@ -161,11 +165,11 @@ class _AdminPageState extends State<AdminPage> {
                       itemBuilder: (context, index) {
                         var user = users![index];
                         return ListTile(
-                          title: Text(user['name']),
-                          subtitle: Text(user['email']),
+                          title: Text(user['name']), // عرض اسم المستخدم
+                          subtitle: Text(user['email']), // عرض البريد الإلكتروني
                           trailing: IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () => _deleteUser(user['email']),
+                            icon: Icon(Icons.delete), // زر الحذف
+                            onPressed: () => _deleteUser(user['email']), // حذف المستخدم عند الضغط
                           ),
                         );
                       },
@@ -190,10 +194,11 @@ class _AdminPageState extends State<AdminPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('إضافة مستخدم'),
+          title: Text('إضافة مستخدم'), // عنوان النافذة
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // حقل إدخال الاسم
               TextField(
                 decoration: InputDecoration(labelText: 'الاسم'),
                 onChanged: (value) {
@@ -202,6 +207,7 @@ class _AdminPageState extends State<AdminPage> {
                   });
                 },
               ),
+              // حقل إدخال البريد الإلكتروني
               TextField(
                 decoration: InputDecoration(labelText: 'البريد الإلكتروني'),
                 onChanged: (value) {
@@ -210,6 +216,7 @@ class _AdminPageState extends State<AdminPage> {
                   });
                 },
               ),
+              // اختيار إذا كان المستخدم هو admin
               SwitchListTile(
                 title: Text("هل هو Admin؟"),
                 value: isAdmin,
@@ -222,15 +229,17 @@ class _AdminPageState extends State<AdminPage> {
             ],
           ),
           actions: [
+            // زر إلغاء
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
               child: Text('إلغاء'),
             ),
+            // زر إضافة
             TextButton(
               onPressed: () {
-                addUser(name, email, isAdmin);
+                addUser(name, email, isAdmin); // إضافة المستخدم
                 Navigator.pop(context);
               },
               child: Text('إضافة'),
